@@ -19,7 +19,7 @@ const ChatScreen = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState('');
-  const [localChatHistory, setLocalChatHistory] = useState([]); // Local state to store chat messages
+  const [localChatHistory, setLocalChatHistory] = useState([]);
 
   const { name, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage } = useContext(Context);
 
@@ -32,7 +32,7 @@ const ChatScreen = () => {
   }, [getChatRooms, chatRooms]);
 
   useEffect(() => {
-    // Sync chatHistory from context with local state when selected chat changes
+
     if (selectedChat && chatHistory) {
       setLocalChatHistory(chatHistory);
     }
@@ -50,21 +50,20 @@ const ChatScreen = () => {
 
   const handleChatSelect = async (chatId) => {
     setSelectedChat(chatId);
-    await getChatMessages(chatId); // Fetch messages for the selected chat
+    await getChatMessages(chatId); 
   };
 
   const handleSendMessage = async () => {
     if (message.trim() !== '') {
       console.log('Sending message:', message);
-      await sendMessage(selectedChat, message); // Send message to backend
-
-      // Optimistically update chat messages in the local state
+      await sendMessage(selectedChat, message);
+     
       setLocalChatHistory(prevHistory => [
         ...prevHistory, 
-        { sender: name, message } // Append new message
+        { sender: name, message } 
       ]);
 
-      setMessage(''); // Clear message input
+      setMessage('');
     }
   };
 
