@@ -50,16 +50,30 @@ def send_message():
     if not does_fields_exist(data, ['chat_id', 'sender', 'message']):
         return 'Missing data', 400
 
+    chat = Chats.get_chat_room_by_id(data['chat_id'])
+    user1 = Users.get_user_by_username(chat['user1'])[0]
+    user2 = Users.get_user_by_username(chat['user2'])[0]
+
+    if data['sender'] == chat['user1']:
+        src_lang = user1['language']
+        tgt_lang = user2['language']
+        message = data['message']
+        translated_message = translate_text(data['message'], src_lang, tgt_lang)
+    else:
+        src_lang = user2['language']
+        tgt_lang = user1['language']
+        translated_message = data['message']
+        message = translate_text(data['message'], src_lang, tgt_lang)
+
     message = {
         'chat_id': data['chat_id'],
         'sender': data['sender'],
-        'message': data['message'],
+        'message_user1': message,
+        'message_user2': translated_message,
         'date': datetime.now()
     }
 
-    print(data)
     chat = Chats.get_chat_room_by_id(data['chat_id'])
-    print(chat)
     if not chat:
         return 'chat not found', 404
 
@@ -71,23 +85,19 @@ def send_message():
 @chat_bp.route('/<chat_id>', methods=['GET'])
 def get_messages(chat_id):
     page = int(request.args.get('page', 1))
+    sender = request.args.get('sender')
 
     messages = Messages.get_messages_by_chat_id(chat_id, page)
 
     return_messages = []
 
     chat = Chats.get_chat_room_by_id(chat_id)
-    user1 = Users.get_user_by_username(chat['user1'])
-    user2 = Users.get_user_by_username(chat['user2'])
-
-    src_lang = user2[0]['language']
-    tgt_lang = user1[0]['language']
 
     for message in messages:
-        if message['sender'] == chat['user1']:
-            message_to_append = message['message']
+        if sender == chat['user1']:
+            message_to_append = message['message_user1']
         else:
-            message_to_append = translate_text(message['message'], src_lang, tgt_lang)
+            message_to_append = message['message_user2']
 
         return_messages.append({
             'sender': message['sender'],
@@ -129,7 +139,7 @@ def translate_text(text, src_lang, tgt_lang):
     translated_sentences = []
     for sentence in sentences:
         if sentence:
-            if re.match(r'^[a-zA-Z0-9 ]*[.!?]?$', sentence):
+            if re.match(r'^[a-zA-Z0-9 ,\']*[.!?]*$', sentence):
                 translated_sentences.append(translate_sentence(sentence, tgt_lang))
             else:
                 translated_sentences.append(sentence)
@@ -139,13 +149,14 @@ def translate_text(text, src_lang, tgt_lang):
 def split_text(text):
     prompt = f"Split the following text into an array where the text are in separate values so a translation model \
                 can translate it good, emojis and symbols not being affected. \
-                For example '🤡 Esti bine? =))' should be ['🤡', 'Esti bine?', '=))']:\n\n{text}"
+                For example '🤡 Esti bine?? =))' should be ['🤡', 'Esti bine??', '=))']:\n\n{text}"
 
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that splits text into an array of sentences "
-                                          "based on the . ? ! keys. You only respond with the split array."},
+                                          "based only on the . ? ! keys. Do not split based on commas or apostrophe. "
+                                          "You only respond with the split array."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=500
