@@ -1,12 +1,8 @@
-from flask import Flask
+import os
+from create_app import create_app
 
-app = Flask(__name__)
-
-
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
-
+app = create_app()
 
 if __name__ == '__main__':
-    app.run()
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    app.run(host='localhost', port=5000)
