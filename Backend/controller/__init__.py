@@ -1,5 +1,5 @@
-from .chat import chat_bp
-from .user import user_bp
-from .authentication import auth_bp
+from .chat import ChatController
+from .user import UserController
+from .authentication import AuthController
 
-__all__ = ['chat_bp', 'user_bp', 'auth_bp']
+__all__ = ['ChatController', 'UserController', 'AuthController']
