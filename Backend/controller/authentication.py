@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import jwt
 import uuid
 
+from controller.utils import does_fields_exist
 from model import Users
 
 auth_bp = Blueprint('auth_bp', __name__)
@@ -13,7 +14,7 @@ auth_bp = Blueprint('auth_bp', __name__)
 def register():
     data = request.json
 
-    if not data['email'] or not data['password'] or not data['name']:
+    if not does_fields_exist(data, ['email', 'password', 'name', 'language']):
         return 'Missing data', 400
 
     if Users.get_user_by_email(data['email']):
@@ -39,7 +40,7 @@ def register():
 def login():
     data = request.json
 
-    if not data['email'] or not data['password']:
+    if not does_fields_exist(data, ['email', 'password']):
         return 'Missing data', 400
 
     user = Users.get_user_by_email(data['email'])

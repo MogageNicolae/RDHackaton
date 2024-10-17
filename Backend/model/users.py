@@ -12,7 +12,7 @@ class Users:
 
     @staticmethod
     def get_user_by_username(username):
-        return mongo.db.users.find_one({'username': username})
+        return mongo.db.users.find({'username': {'$regex': username, '$options': 'i'}})
 
     @staticmethod
     def get_user_by_email(email):

@@ -8,11 +8,11 @@ from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 from transformers import SeamlessM4Tv2Model, AutoProcessor
 
-processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
-model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(device)
-model.to(device)
+# processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
+# model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# print(device)
+# model.to(device)
 
 mongo = PyMongo()
 jwt = JWTManager()

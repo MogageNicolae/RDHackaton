@@ -1,12 +1,17 @@
+import json
+import os
 import uuid
 from datetime import datetime
-
+import openai
 from flask import Blueprint, request, jsonify
 
-from create_app import processor, model
+from controller.utils import does_fields_exist
+# from create_app import processor, model
 from model import Chats, Messages, Users
 
 chat_bp = Blueprint('chat_bp', __name__, url_prefix='/chat')
+
+openai.api_key = os.environ.get('OPENAI_API_KEY')
 
 
 @chat_bp.route('/create', methods=['POST'])
@@ -90,16 +95,45 @@ def get_messages(chat_id):
     return jsonify(return_messages)
 
 
-def translate_text(text, src_lang="ron", tgt_lang="eng"):
-    text_inputs = processor(text=text, src_lang=src_lang, return_tensors="pt").to(model.device)
+@chat_bp.route('/history', methods=['GET'])
+def get_chat_history():
+    username = request.args.get('username')
 
-    output_tokens = model.generate(**text_inputs, tgt_lang=tgt_lang, generate_speech=False)
-    translated_text_from_text = processor.decode(output_tokens[0].tolist()[0], skip_special_tokens=True)
-    return translated_text_from_text
+    chats = Chats.get_chat_rooms_by_user_id(username)
+
+    return_chats = []
+
+    for chat in chats:
+        return_chats.append({
+            'chat_id': chat['chat_id'],
+            'user1': chat['user1'],
+            'user2': chat['user2']
+        })
+
+    return jsonify(return_chats)
 
 
-def does_fields_exist(data, fields):
-    for field in fields:
-        if field not in data:
-            return False
-    return True
+def translate_text(text, target_language="English"):
+    prompt = f"Translate the following text to {target_language}:\n\n{text}"
+
+    chat_completion = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that translates text."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=500
+    )
+
+    response = json.loads(chat_completion.model_dump_json(indent=2))
+    translated_text = response['choices'][0]['message']['content']
+    return translated_text
+
+# def translate_text(text, src_lang="ron", tgt_lang="eng"):
+#     text_inputs = processor(text=text, src_lang=src_lang, return_tensors="pt").to(model.device)
+#
+#     output_tokens = model.generate(**text_inputs, tgt_lang=tgt_lang, generate_speech=False)
+#     translated_text_from_text = processor.decode(output_tokens[0].tolist()[0], skip_special_tokens=True)
+#     return translated_text_from_text
+
+
