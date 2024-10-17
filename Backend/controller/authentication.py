@@ -50,6 +50,6 @@ def login():
     token = jwt.encode({'id': user['id'], 'date': str(datetime.now())}, 'secret', algorithm='HS256')
     Users.update_user_token(user['email'], token, datetime.now() + timedelta(hours=24))
 
-    response = make_response(jsonify({'token': token, 'user_id': user['id']}))
+    response = make_response(jsonify({'token': token, 'username': user['username']}))
 
     return response

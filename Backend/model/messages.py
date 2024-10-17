@@ -7,5 +7,5 @@ class Messages:
         mongo.db.messages.insert_one(new_message)
 
     @staticmethod
-    def get_messages_by_chat_id(chat_id):
-        return mongo.db.messages.find({'chat_id': chat_id})
+    def get_messages_by_chat_id(chat_id, page=1, page_size=25):
+        return mongo.db.messages.find({'chat_id': chat_id}).skip((page - 1) * page_size).limit(page_size)
