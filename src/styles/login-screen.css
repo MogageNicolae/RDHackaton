@@ -1,0 +1,106 @@
+.loginContainer {
+    display: flex;
+    flex-direction: row;  
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    overflow: clip;
+    font-family: Helvetica;
+  }
+  
+  .formContainer {
+    height: 100%;
+    width: 50%;  
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.2em;
+    padding: 0 12%;
+  }
+  
+  .imageContainer {
+    height: 100%;
+    width: 50%;  
+    display: flex;
+    position: relative;
+  }
+  
+  .imageOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 50%;
+    background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
+    display: block;
+  }
+  
+  .inputContainer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0.5em;
+  }
+  
+  .input {
+    width: 100%;
+  }
+  
+  .button {
+    width: 100%;
+    background: #000 !important;
+    text-transform: none;
+    margin-top: 1em;
+    color: white;
+  }
+
+  .button:hover {
+    background-color: rgb(25, 24, 24) !important;
+  }
+  
+  .icon {
+    width: 1.2em;
+    height: 1.2em;
+    margin-bottom: 0.2em;
+  }
+  
+  .registerContainer {
+    margin-top: 2em;
+    font-size: 0.8em;
+    display: flex;
+    gap: 0.8em;
+  }
+  
+  .link {
+    text-decoration: none;
+    font-weight: bold;
+    color: #000;
+  }
+  
+  .errorMessage {
+    color: red;
+    margin-top: 10px;
+  }
+  
+  
+  @media (max-width: 768px) {
+    .loginContainer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .formContainer, .imageContainer {
+      width: 100%; 
+      height: 50%;
+      padding: 2% 6%; 
+    }
+  
+    .imageOverlay {
+      width: 100%;
+      background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
+    }
+    
+  }
