@@ -1,7 +1,7 @@
 from create_app import mongo
 
 
-class User:
+class Users:
     @staticmethod
     def add_user(new_user):
         mongo.db.users.insert_one(new_user)

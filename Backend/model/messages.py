@@ -1,7 +1,7 @@
 from create_app import mongo
 
 
-class Message:
+class Messages:
     @staticmethod
     def add_message(new_message):
         mongo.db.messages.insert_one(new_message)
