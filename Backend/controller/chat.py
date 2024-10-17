@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import re
@@ -124,30 +125,32 @@ def translate_sentence(sub_sentence, tgt_lang):
 
 def translate_text(text, src_lang, tgt_lang):
     tokenizer.src_lang = src_lang
-    sentences = re.split(r'(?<=[.!?])', text)
+    sentences = split_text(text)
     translated_sentences = []
     for sentence in sentences:
         if sentence:
-            translated_sentences.append(translate_sentence(sentence, tgt_lang))
+            if re.match(r'^[a-zA-Z0-9 ]*[.!?]?$', sentence):
+                translated_sentences.append(translate_sentence(sentence, tgt_lang))
+            else:
+                translated_sentences.append(sentence)
     return ' '.join(translated_sentences)
 
-    # encoded = tokenizer(text, return_tensors="pt")
-    # generated_tokens = model.generate(encoded['input_ids'], forced_bos_token_id=tokenizer.get_lang_id(tgt_lang))
-    # translation = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
-    # return translation
 
-# def translate_text(text, target_language="English"):
-#     prompt = f"Translate the following text to {target_language}:\n\n{text}"
-#
-#     chat_completion = openai.chat.completions.create(
-#         model="gpt-4",
-#         messages=[
-#             {"role": "system", "content": "You are a helpful assistant that translates text."},
-#             {"role": "user", "content": prompt}
-#         ],
-#         max_tokens=500
-#     )
-#
-#     response = json.loads(chat_completion.model_dump_json(indent=2))
-#     translated_text = response['choices'][0]['message']['content']
-#     return translated_text
+def split_text(text):
+    prompt = f"Split the following text into an array where the text are in separate values so a translation model \
+                can translate it good, emojis and symbols not being affected. \
+                For example '🤡 Esti bine? =))' should be ['🤡', 'Esti bine?', '=))']:\n\n{text}"
+
+    chat_completion = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that splits text into an array of sentences "
+                                          "based on the . ? ! keys. You only respond with the split array."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=500
+    )
+
+    response = json.loads(chat_completion.model_dump_json(indent=2))
+    translated_text = ast.literal_eval(response['choices'][0]['message']['content'])
+    return translated_text
