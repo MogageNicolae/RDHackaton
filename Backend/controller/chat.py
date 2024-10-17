@@ -1,11 +1,13 @@
 import json
 import os
+import re
 import uuid
 from datetime import datetime
 import openai
 from flask import Blueprint, request, jsonify
 
 from controller.utils import does_fields_exist
+from create_app import tokenizer, model
 # from create_app import processor, model
 from model import Chats, Messages, Users
 
@@ -74,17 +76,17 @@ def get_messages(chat_id):
     return_messages = []
 
     chat = Chats.get_chat_room_by_id(chat_id)
-    user1 = Users.get_user_by_id(chat['user1'])
-    user2 = Users.get_user_by_id(chat['user2'])
+    user1 = Users.get_user_by_username(chat['user1'])
+    user2 = Users.get_user_by_username(chat['user2'])
 
-    # src_lang = user1['language']
-    # tgt_lang = user2['language']
+    src_lang = user2[0]['language']
+    tgt_lang = user1[0]['language']
 
     for message in messages:
         if message['sender'] == chat['user1']:
             message_to_append = message['message']
         else:
-            message_to_append = translate_text(message['message']) #, src_lang, tgt_lang)
+            message_to_append = translate_text(message['message'], src_lang, tgt_lang)
 
         return_messages.append({
             'sender': message['sender'],
@@ -113,27 +115,39 @@ def get_chat_history():
     return jsonify(return_chats)
 
 
-def translate_text(text, target_language="English"):
-    prompt = f"Translate the following text to {target_language}:\n\n{text}"
+def translate_sentence(sub_sentence, tgt_lang):
+    encoded = tokenizer(sub_sentence, return_tensors="pt").to(model.device)
+    generated_tokens = model.generate(encoded['input_ids'], forced_bos_token_id=tokenizer.get_lang_id(tgt_lang))
+    translation = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
+    return translation
 
-    chat_completion = openai.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant that translates text."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=500
-    )
 
-    response = json.loads(chat_completion.model_dump_json(indent=2))
-    translated_text = response['choices'][0]['message']['content']
-    return translated_text
+def translate_text(text, src_lang, tgt_lang):
+    tokenizer.src_lang = src_lang
+    sentences = re.split(r'(?<=[.!?])', text)
+    translated_sentences = []
+    for sentence in sentences:
+        if sentence:
+            translated_sentences.append(translate_sentence(sentence, tgt_lang))
+    return ' '.join(translated_sentences)
 
-# def translate_text(text, src_lang="ron", tgt_lang="eng"):
-#     text_inputs = processor(text=text, src_lang=src_lang, return_tensors="pt").to(model.device)
+    # encoded = tokenizer(text, return_tensors="pt")
+    # generated_tokens = model.generate(encoded['input_ids'], forced_bos_token_id=tokenizer.get_lang_id(tgt_lang))
+    # translation = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
+    # return translation
+
+# def translate_text(text, target_language="English"):
+#     prompt = f"Translate the following text to {target_language}:\n\n{text}"
 #
-#     output_tokens = model.generate(**text_inputs, tgt_lang=tgt_lang, generate_speech=False)
-#     translated_text_from_text = processor.decode(output_tokens[0].tolist()[0], skip_special_tokens=True)
-#     return translated_text_from_text
-
-
+#     chat_completion = openai.chat.completions.create(
+#         model="gpt-4",
+#         messages=[
+#             {"role": "system", "content": "You are a helpful assistant that translates text."},
+#             {"role": "user", "content": prompt}
+#         ],
+#         max_tokens=500
+#     )
+#
+#     response = json.loads(chat_completion.model_dump_json(indent=2))
+#     translated_text = response['choices'][0]['message']['content']
+#     return translated_text
