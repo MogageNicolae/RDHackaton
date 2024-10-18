@@ -124,4 +124,19 @@ export const searchForUsers = async (name) => {
     }
 }
 
-
+export const getAudioFile = async (chat_id, name, audio_name, token) => {
+    try {
+        console.log("getting audio file with name: ", audio_name);
+        const response = await fetch(`${baseURL}/assets/audio/${chat_id}/${name}/${audio_name}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'audio/mpeg', 'Authorization': `Bearer ${token}`},
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.blob();
+    } catch (error) {
+        console.error("Getting audio file failed: ", error);
+        throw error;
+    }
+}
