@@ -21,7 +21,7 @@ const ChatScreen = () => {
   const [message, setMessage] = useState('');
   const [localChatHistory, setLocalChatHistory] = useState([]);
 
-  const { name, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage } = useContext(Context);
+  const { name, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
 
   useEffect(() => {
     async function getChats() {
@@ -43,24 +43,35 @@ const ChatScreen = () => {
     navigate("/");
   };
 
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value);
-    // Add search logic here
+  const handleSearch = async () => {
+    console.log("HANFDLE SEARCH WITH SEARCH TERM: ", searchTerm);
+    if (searchTerm != "") {
+      await searchUsers(searchTerm);
+    } else {
+      setSearchedUsers(null);
+    }
+  };
+
+  const handleKeyPress = async (e) => {
+    console.log("KEY PRESSED");
+    if (e.key === 'Enter') {
+      await handleSearch();
+    }
   };
 
   const handleChatSelect = async (chatId) => {
     setSelectedChat(chatId);
-    await getChatMessages(chatId); 
+    await getChatMessages(chatId);
   };
 
   const handleSendMessage = async () => {
     if (message.trim() !== '') {
       console.log('Sending message:', message);
-      await sendMessage(selectedChat, message);
-     
+      await sendMessage(message);
+
       setLocalChatHistory(prevHistory => [
-        ...prevHistory, 
-        { sender: name, message } 
+        ...prevHistory,
+        { sender: name, message }
       ]);
 
       setMessage('');
@@ -74,28 +85,42 @@ const ChatScreen = () => {
         <h2>{name}</h2>
         <Button variant="contained" background-color="black" onClick={handleLogout}>Logout</Button>
       </div>
-      
+
       <div className="chats-section">
         <CustomTextField
           variant="outlined"
           label="Search users..."
           value={searchTerm}
-          onChange={handleSearch}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleKeyPress}
           fullWidth
           className="search-box"
         />
         <List className="chat-list">
-          {chatRooms?.map((room) => (
-            <ListItem key={room.chat_id} button onClick={() => handleChatSelect(room.chat_id)}>
-              <ListItemAvatar>
-                <Avatar>{room.user1 === name ? room.user2[0] : room.user1[0]}</Avatar>
-              </ListItemAvatar>
-              <ListItemText primary={room.user1 === name ? room.user2 : room.user1} />
-            </ListItem>
-          ))}
+          {searchedUsers ? (
+            searchedUsers
+              .filter(user => user.username !== name)  
+              .map((user) => (
+                <ListItem key={user.username}>
+                  <ListItemAvatar>
+                    <Avatar>{user.username[0]}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={user.username} />
+                </ListItem>
+              ))
+          ) : (
+            chatRooms?.map((room) => (
+              <ListItem key={room.chat_id} button onClick={() => handleChatSelect(room.chat_id)}>
+                <ListItemAvatar>
+                  <Avatar>{room.user1 === name ? room.user2[0] : room.user1[0]}</Avatar>
+                </ListItemAvatar>
+                <ListItemText primary={room.user1 === name ? room.user2 : room.user1} />
+              </ListItem>
+            ))
+          )}
         </List>
       </div>
-      
+
       <div className="chat-section">
         {selectedChat ? (
           <>
@@ -124,7 +149,7 @@ const ChatScreen = () => {
           <p className="no-chat-selected">Select a chat to start messaging</p>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 
