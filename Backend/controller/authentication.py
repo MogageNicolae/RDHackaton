@@ -29,15 +29,17 @@ class AuthController:
             return 'User already exists', 409
 
         hashed_password = generate_password_hash(data['password'])
-        access_token = create_access_token(identity={'id': 'id', 'date': str(datetime.now())}, expires_delta=timedelta(hours=24))
+        user_id = str(uuid.uuid4())
+        access_token = create_access_token(identity={'id': user_id, 'date': str(datetime.now())},
+                                           expires_delta=timedelta(hours=24))
         user = {
             'email': data['email'],
             'username': data['name'],
-            'id': str(uuid.uuid4()),
+            'id': user_id,
             'password': hashed_password,
             'language': data['language'],
             'token': access_token,
-            'refresh_token': jwt.encode({'email': data['email']}, 'secret', algorithm='HS256'),
+            'refresh_token': jwt.encode({'email': data['email'], 'date': str(datetime.now())}, 'secret', algorithm='HS256'),
             'expires_in': datetime.now() + timedelta(hours=24)
         }
         Users.add_user(user)
@@ -56,7 +58,8 @@ class AuthController:
         if not user or not check_password_hash(user['password'], data['password']):
             return 'Invalid credentials', 401
 
-        token = jwt.encode({'id': user['id'], 'date': str(datetime.now())}, 'secret', algorithm='HS256')
+        token = create_access_token(identity={'id': user['id'], 'date': str(datetime.now())},
+                                    expires_delta=timedelta(hours=24))
         Users.update_user_token(user['email'], token, datetime.now() + timedelta(hours=24))
 
         response = make_response(jsonify({'token': token, 'username': user['username']}))
