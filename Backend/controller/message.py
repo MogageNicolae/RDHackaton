@@ -4,8 +4,9 @@ from io import BytesIO
 import torch
 import torchaudio
 from flask import Blueprint, request, send_file
+from flask_jwt_extended import jwt_required
 
-from controller.utils import do_fields_exist
+from controller.utils import do_fields_exist, map_language_to_seamless
 from create_app import processor, multilingual_model
 from model import Chats, Users
 
@@ -20,6 +21,7 @@ class MessageController:
         self.blueprint.route('/audio/transcribe', methods=['GET'])(self.__transcribe_audio)
         self.blueprint.route('/text/to-audio', methods=['GET'])(self.__text_to_audio)
 
+    @jwt_required()
     def __transcribe_audio(self):
         chat_id = request.args.get('chat_id')
         sender = request.args.get('sender')
@@ -31,10 +33,12 @@ class MessageController:
 
         if chat['user1'] == sender:
             user = 'user1'
-            tgt_lang = Users.get_user_by_username(chat['user2'])[0]['language']
+            language = Users.get_user_by_username(chat['user2'])[0]['language']
+            tgt_lang = map_language_to_seamless(language)
         else:
             user = 'user2'
-            tgt_lang = Users.get_user_by_username(chat['user1'])[0]['language']
+            language = Users.get_user_by_username(chat['user1'])[0]['language']
+            tgt_lang = map_language_to_seamless(language)
 
         audio, orig_freq = torchaudio.load(os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat_id, user, audio_file))
         audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
@@ -44,17 +48,19 @@ class MessageController:
 
         return translated_text_from_audio
 
-    @staticmethod
-    def __text_to_audio():
+
+    @jwt_required()
+    def __text_to_audio(self):
         data = request.json
 
         if not do_fields_exist(data, ['text', 'username']):
             return 'Missing data', 400
 
         language = Users.get_user_by_username(data['username'])[0]['language']
+        mapped_language = map_language_to_seamless(language)
 
         text_inputs = processor(text=data['text'], src_lang=language, return_tensors="pt").to(multilingual_model.device)
-        audio_array_from_text = multilingual_model.generate(**text_inputs, tgt_lang=language)[0].cpu().numpy().squeeze()
+        audio_array_from_text = multilingual_model.generate(**text_inputs, tgt_lang=mapped_language)[0].cpu().numpy().squeeze()
 
         audio_tensor = torch.tensor(audio_array_from_text).unsqueeze(0)
         buf = BytesIO()

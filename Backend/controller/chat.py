@@ -8,8 +8,9 @@ import torch
 import torchaudio
 from datetime import datetime
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 
-from controller.utils import do_fields_exist
+from controller.utils import do_fields_exist, map_language_to_m2m, map_language_to_seamless
 from create_app import tokenizer, translation_model, processor, multilingual_model
 from model import Chats, Messages, Users
 
@@ -29,8 +30,8 @@ class ChatController:
         self.blueprint.route('/<chat_id>', methods=['GET'])(self.__get_messages)
         self.blueprint.route('/history', methods=['GET'])(self.__get_chat_history)
 
-    @staticmethod
-    def __create_chat():
+    @jwt_required()
+    def __create_chat(self):
         data = request.json
 
         if not do_fields_exist(data, ['user1', 'user2']):
@@ -45,14 +46,15 @@ class ChatController:
 
         return chat['chat_id']
 
-    @staticmethod
-    def __delete_chat():
+    @jwt_required()
+    def __delete_chat(self):
         chat_id = request.args.get('chat_id')
 
         Chats.delete_chat_room(chat_id)
 
         return 'chat deleted'
 
+    @jwt_required()
     def __send_message_text(self):
         data = request.json
 
@@ -66,7 +68,7 @@ class ChatController:
         user1 = Users.get_user_by_username(chat['user1'])[0]
         user2 = Users.get_user_by_username(chat['user2'])[0]
 
-        message, translated_message = self.__get_users_messages(data, chat, user1, user2)
+        message, translated_message = self.__translate_message(data, chat, user1, user2)
 
         message = {
             'chat_id': data['chat_id'],
@@ -80,6 +82,7 @@ class ChatController:
 
         return 'message sent'
 
+    @jwt_required()
     def __send_message_audio(self):
         if 'file' not in request.files:
             return 'No file part', 400
@@ -96,15 +99,7 @@ class ChatController:
         if not chat:
             return 'chat not found', 404
 
-        user1 = Users.get_user_by_username(chat['user1'])[0]
-        user2 = Users.get_user_by_username(chat['user2'])[0]
-
-        if user1['username'] == request.form['sender']:
-            tgt_lang = user2['language']
-            file_path_user1, file_path_user2 = self.__create_audio_files(file, user1_path, user2_path, tgt_lang)
-        else:
-            tgt_lang = user1['language']
-            file_path_user2, file_path_user1 = self.__create_audio_files(file, user2_path, user1_path, tgt_lang)
+        file_path_user1, file_path_user2 = self.__translate_audio(file, user1_path, user2_path, chat)
 
         message = {
             'chat_id': request.form['chat_id'],
@@ -143,21 +138,34 @@ class ChatController:
 
         return file_path_user1, file_path_user2
 
-    def __get_users_messages(self, data, chat, user1, user2):
+    def __translate_message(self, data, chat, user1, user2):
         if data['sender'] == chat['user1']:
-            src_lang = user1['language']
-            tgt_lang = user2['language']
+            src_lang = map_language_to_m2m(user1['language'])
+            tgt_lang = map_language_to_m2m(user2['language'])
             message = data['message']
             translated_message = self.translate_text(data['message'], src_lang, tgt_lang)
         else:
-            src_lang = user2['language']
-            tgt_lang = user1['language']
+            src_lang = map_language_to_m2m(user2['language'])
+            tgt_lang = map_language_to_m2m(user1['language'])
             translated_message = data['message']
             message = self.translate_text(data['message'], src_lang, tgt_lang)
         return message, translated_message
 
-    @staticmethod
-    def __get_messages(chat_id):
+    def __translate_audio(self, file, user1_path, user2_path, chat):
+        user1 = Users.get_user_by_username(chat['user1'])[0]
+        user2 = Users.get_user_by_username(chat['user2'])[0]
+
+        if user1['username'] == request.form['sender']:
+            tgt_lang = map_language_to_seamless(user2['language'])
+            file_path_user1, file_path_user2 = self.__create_audio_files(file, user1_path, user2_path, tgt_lang)
+        else:
+            tgt_lang = map_language_to_seamless(user1['language'])
+            file_path_user2, file_path_user1 = self.__create_audio_files(file, user2_path, user1_path, tgt_lang)
+
+        return file_path_user1, file_path_user2
+
+    @jwt_required()
+    def __get_messages(self, chat_id):
         page = int(request.args.get('page', 1))
         sender = request.args.get('sender')
 
@@ -181,8 +189,8 @@ class ChatController:
 
         return jsonify(return_messages)
 
-    @staticmethod
-    def __get_chat_history():
+    @jwt_required()
+    def __get_chat_history(self):
         username = request.args.get('username')
 
         chats = Chats.get_chat_rooms_by_user_id(username)

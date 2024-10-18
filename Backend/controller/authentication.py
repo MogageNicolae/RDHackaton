@@ -1,4 +1,5 @@
 from flask import Blueprint, request, make_response, jsonify
+from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
@@ -28,13 +29,14 @@ class AuthController:
             return 'User already exists', 409
 
         hashed_password = generate_password_hash(data['password'])
+        access_token = create_access_token(identity={'id': 'id', 'date': str(datetime.now())}, expires_delta=timedelta(hours=24))
         user = {
             'email': data['email'],
             'username': data['name'],
             'id': str(uuid.uuid4()),
             'password': hashed_password,
             'language': data['language'],
-            'token': jwt.encode({'id': 'id', 'date': str(datetime.now())}, 'secret', algorithm='HS256'),
+            'token': access_token,
             'refresh_token': jwt.encode({'email': data['email']}, 'secret', algorithm='HS256'),
             'expires_in': datetime.now() + timedelta(hours=24)
         }
