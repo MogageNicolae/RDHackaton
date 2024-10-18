@@ -20,6 +20,7 @@ const ChatScreen = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState('');
   const [localChatHistory, setLocalChatHistory] = useState([]);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   const { name, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
 
@@ -28,35 +29,38 @@ const ChatScreen = () => {
       await getChatRooms();
     }
     getChats();
-    console.log("chat rooms: ", chatRooms);
-  }, [getChatRooms, chatRooms]);
+  }, []);
 
   useEffect(() => {
-
     if (selectedChat && chatHistory) {
       setLocalChatHistory(chatHistory);
     }
   }, [chatHistory, selectedChat]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  useEffect( () => {
+    async function search() {
+        if (debouncedSearchTerm) {
+            await searchUsers(searchTerm);
+        } else {
+            setSearchedUsers(null);
+        }
+    }
+    search();
+  }, [debouncedSearchTerm]);
+
   const handleLogout = () => {
     logout();
     navigate("/");
-  };
-
-  const handleSearch = async () => {
-    console.log("HANFDLE SEARCH WITH SEARCH TERM: ", searchTerm);
-    if (searchTerm != "") {
-      await searchUsers(searchTerm);
-    } else {
-      setSearchedUsers(null);
-    }
-  };
-
-  const handleKeyPress = async (e) => {
-    console.log("KEY PRESSED");
-    if (e.key === 'Enter') {
-      await handleSearch();
-    }
   };
 
   const handleChatSelect = async (chatId) => {
@@ -92,7 +96,6 @@ const ChatScreen = () => {
           label="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyPress={handleKeyPress}
           fullWidth
           className="search-box"
         />

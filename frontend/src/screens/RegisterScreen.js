@@ -7,6 +7,7 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import loginImg from '../assets/loginImg.jpg'
 import '../styles/register-screen.css'
+import {languageOptions} from "../utils/languages";
 
 const CustomTextField = styled(TextField)({
     '& label.Mui-focused': {
