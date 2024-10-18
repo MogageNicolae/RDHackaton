@@ -31,7 +31,11 @@ def create_app():
     app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
     app.config['JWT_ALGORITHM'] = os.environ.get('JWT_ALGORITHM')
-    CORS(app, supports_credentials=True)
+    CORS(app, supports_credentials=True, resources={
+        r"/*": {
+            "origins": ["http://localhost:3000"]
+        }
+    })
 
     mongo.init_app(app)
     jwt.init_app(app)

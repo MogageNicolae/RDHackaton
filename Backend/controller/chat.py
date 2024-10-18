@@ -250,5 +250,5 @@ class ChatController:
         )
 
         response = json.loads(chat_completion.model_dump_json(indent=2))
-        translated_text = ast.literal_eval(response['choices'][0]['message']['content'])
-        return translated_text
+        splitted_text = ast.literal_eval(response['choices'][0]['message']['content'])
+        return splitted_text
