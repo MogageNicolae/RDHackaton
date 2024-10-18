@@ -12,7 +12,6 @@ class AssetsController:
     def register_routes(self):
         self.blueprint.route('/audio/<chat_id>/<username>/<file_name>', methods=['GET'])(self.__get_asset)
 
-    @jwt_required()
     def __get_asset(self, chat_id, username, file_name):
         file_path = f'./assets/audios/{chat_id}/{username}/{file_name}'
 

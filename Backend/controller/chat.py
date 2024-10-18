@@ -185,7 +185,6 @@ class ChatController:
                 print(message_to_append)
                 print(message_to_append.split("\\")[-1])
                 message_to_append = message_to_append.split("\\")[-1]
-                message_to_append = f'http://localhost:5000/assets/audio/{chat_id}/{sender}/{message_to_append}'
 
             return_messages.append({
                 'sender': message['sender'],
