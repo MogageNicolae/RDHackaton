@@ -10,15 +10,15 @@ from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer, AutoPr
 translation_model = M2M100ForConditionalGeneration.from_pretrained("facebook/m2m100_418M")
 tokenizer = M2M100Tokenizer.from_pretrained("facebook/m2m100_418M")
 
-# processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
-# multilingual_model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
-processor = None
-multilingual_model = None
+processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
+multilingual_model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
+# processor = None
+# multilingual_model = None
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
 translation_model.to(device)
-# multilingual_model.to(device)
+multilingual_model.to(device)
 
 mongo = PyMongo()
 jwt = JWTManager()

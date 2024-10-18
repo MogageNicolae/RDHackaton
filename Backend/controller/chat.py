@@ -2,6 +2,7 @@ import ast
 import json
 import os
 import re
+import subprocess
 import uuid
 import openai
 import torch
@@ -82,10 +83,17 @@ class ChatController:
 
         return 'message sent'
 
+    def convert_webm_to_wav(self, input_path, output_path):
+        command = f"ffmpeg -i {input_path} -c:a pcm_f32le {output_path}"
+        subprocess.run(command, shell=True, check=True)
+
+    def count_files_in_directory(self, directory):
+        return len([file for file in os.listdir(directory) if os.path.isfile(os.path.join(directory, file))])
+
     @jwt_required()
     def __send_message_audio(self):
         if 'file' not in request.files:
-            return 'No file part', 400
+            return 'No file part', 401
         if 'chat_id' not in request.form or 'sender' not in request.form:
             return 'Missing data', 400
 
@@ -99,6 +107,19 @@ class ChatController:
 
         user1_path, user2_path = self.__create_paths(chat)
 
+        temp_webm_path = os.path.join(user1_path, file.filename)
+        audio_count = self.count_files_in_directory(user1_path)
+        file.filename = f"{audio_count}.wav"
+        temp_wav_path = os.path.join(user1_path, file.filename)
+        file.save(temp_webm_path)
+
+        try:
+            self.convert_webm_to_wav(temp_webm_path, temp_wav_path)
+            os.remove(temp_webm_path)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during conversion: {e}")
+            return 'File conversion failed', 500
+
         file_path_user1, file_path_user2 = self.__translate_audio(file, user1_path, user2_path, chat)
 
         message = {
@@ -111,7 +132,8 @@ class ChatController:
         }
         Messages.add_message(message)
 
-        return 'File uploaded successfully', 200
+        print(jsonify(file.filename))
+        return jsonify(file.filename)
 
     def __create_paths(self, chat):
         chat_folder_path = os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat['chat_id'])
@@ -127,10 +149,10 @@ class ChatController:
     @staticmethod
     def __create_audio_files(file, user1_path, user2_path, tgt_lang):
         file_path_user1 = os.path.join(user1_path, file.filename)
-        file.save(file_path_user1)
+        # file.save(file_path_user1)
         file_path_user2 = os.path.join(user2_path, file.filename)
 
-        audio, orig_freq = torchaudio.load(file_path_user1)
+        audio, orig_freq = torchaudio.load(file_path_user1, format="wav")
         audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
         audio_inputs = processor(audios=audio, return_tensors="pt").to(multilingual_model.device)
         audio_array_from_audio = multilingual_model.generate(**audio_inputs, tgt_lang=tgt_lang)[0].cpu().numpy()
