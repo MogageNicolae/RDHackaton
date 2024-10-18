@@ -57,7 +57,7 @@ const LoginScreen = () => {
         </div>
       </div>
       <div className='imageContainer'>
-        <img src={loginImg} alt="loginImg" />
+        <img src={loginImg} alt="loginImg"  />
         <div className='imageOverlay'></div>
       </div>
 
