@@ -93,11 +93,11 @@ class ChatController:
         if file.filename == '':
             return 'No selected file', 400
 
-        user1_path, user2_path = self.__create_paths(request.form['chat_id'])
-
         chat = Chats.get_chat_room_by_id(request.form['chat_id'])
         if not chat:
             return 'chat not found', 404
+
+        user1_path, user2_path = self.__create_paths(chat)
 
         file_path_user1, file_path_user2 = self.__translate_audio(file, user1_path, user2_path, chat)
 
@@ -113,10 +113,10 @@ class ChatController:
 
         return 'File uploaded successfully', 200
 
-    def __create_paths(self, chat_id: str):
-        chat_folder_path = os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat_id)
-        user1_path = os.path.join(chat_folder_path, 'user1')
-        user2_path = os.path.join(chat_folder_path, 'user2')
+    def __create_paths(self, chat):
+        chat_folder_path = os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat['chat_id'])
+        user1_path = os.path.join(chat_folder_path, chat['user1'])
+        user2_path = os.path.join(chat_folder_path, chat['user2'])
 
         if not os.path.exists(chat_folder_path):
             os.makedirs(user1_path, exist_ok=True)
@@ -181,9 +181,16 @@ class ChatController:
             else:
                 message_to_append = message['message_user2']
 
+            if message['type'] == 'audio':
+                print(message_to_append)
+                print(message_to_append.split("\\")[-1])
+                message_to_append = message_to_append.split("\\")[-1]
+                message_to_append = f'http://localhost:5000/assets/audio/{chat_id}/{sender}/{message_to_append}'
+
             return_messages.append({
                 'sender': message['sender'],
                 'message': message_to_append,
+                'type': message['type'],
                 'date': message['date']
             })
 

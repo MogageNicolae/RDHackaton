@@ -36,10 +36,11 @@ def create_app():
     mongo.init_app(app)
     jwt.init_app(app)
 
-    from controller import AuthController, ChatController, UserController, MessageController
+    from controller import AuthController, ChatController, UserController, MessageController, AssetsController
     app.register_blueprint(AuthController().blueprint)
     app.register_blueprint(UserController().blueprint)
     app.register_blueprint(ChatController(app).blueprint)
     app.register_blueprint(MessageController(app).blueprint)
+    app.register_blueprint(AssetsController().blueprint)
 
     return app
