@@ -7,10 +7,6 @@ class Users:
         mongo.db.users.insert_one(new_user)
 
     @staticmethod
-    def get_user_by_id(user_id):
-        return mongo.db.users.find_one({'id': user_id})
-
-    @staticmethod
     def get_user_by_username(username):
         return mongo.db.users.find({'username': {'$regex': username, '$options': 'i'}})
 
