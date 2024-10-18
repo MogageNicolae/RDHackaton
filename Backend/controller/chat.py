@@ -44,7 +44,7 @@ class ChatController:
         }
         Chats.add_chat_room(chat)
 
-        return chat['chat_id']
+        return jsonify(chat['chat_id'])
 
     @jwt_required()
     def __delete_chat(self):

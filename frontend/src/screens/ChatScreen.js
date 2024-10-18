@@ -25,7 +25,8 @@ const ChatScreen = () => {
   const [audioUrls, setAudioUrls] = useState({});
   const [loadingAudio, setLoadingAudio] = useState(true);
 
-  const { name, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
+  const {
+    name, chatId, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
 
   useEffect(() => {
     const fetchAudioForMessages = async () => {
@@ -99,9 +100,27 @@ const ChatScreen = () => {
     await getChatMessages(chatId);
   };
 
+  const handleUserSelect = async (selectedUser) => {
+    const existingChat = chatRooms.find(room =>
+      (room.user1 === name && room.user2 === selectedUser.username) ||
+      (room.user2 === name && room.user1 === selectedUser.username)
+    );
+
+    if (existingChat) {
+      handleChatSelect(existingChat.chat_id);
+    } else {
+      const newChatId = await createChat(selectedUser.username);
+      if (newChatId) {
+        handleChatSelect(newChatId);
+        await getChatRooms();
+      }
+    }
+    setSearchedUsers(null);
+    setSearchTerm('');
+  };
+
   const handleSendMessage = async () => {
     if (message.trim() !== '') {
-      console.log('Sending message:', message);
       await sendMessage(message);
 
       setLocalChatHistory(prevHistory => [
@@ -133,9 +152,9 @@ const ChatScreen = () => {
         <List className="chat-list">
           {searchedUsers ? (
             searchedUsers
-              .filter(user => user.username !== name)  
+              .filter(user => user.username !== name)
               .map((user) => (
-                <ListItem key={user.username}>
+                <ListItem key={user.username} button onClick={() => handleUserSelect(user)}>
                   <ListItemAvatar>
                     <Avatar>{user.username[0]}</Avatar>
                   </ListItemAvatar>
@@ -200,7 +219,7 @@ const ChatScreen = () => {
           <p className="no-chat-selected">Select a chat to start messaging</p>
         )}
       </div>
-    </div >
+    </div>
   );
 };
 

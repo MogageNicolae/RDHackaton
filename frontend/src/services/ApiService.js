@@ -42,7 +42,9 @@ export const loginUser = async (credentials) => {
 
 export const createChatRoom = async (users, token) => {
     try {
-        console.log("creating chatroom with users: ", users);
+        console.log(JSON.stringify(users));
+        console.log("creating chatroom with users: ", JSON.stringify(users));
+        console.log("creating chatroom with token: ", token);
         const response = await fetch(`${baseURL}/chat/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

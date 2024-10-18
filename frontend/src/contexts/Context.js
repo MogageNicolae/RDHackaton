@@ -61,9 +61,10 @@ const ContextProvider = ({ children }) => {
   const createChat = async (user2) => {
     try {
       console.log("creating chat room..")
-      const response = await createChatRoom({ name, user2 }, userToken);
+      const response = await createChatRoom({ user1: name, user2 }, userToken);
       console.log("successful, the chat id is: ", response);
       setChatId(response);
+      return response;
     } catch (error) {
       console.error("Error creating chat:", error);
       throw error;

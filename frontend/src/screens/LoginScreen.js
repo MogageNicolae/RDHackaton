@@ -7,7 +7,7 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import PersonIcon from '@mui/icons-material/Person';
 import LockIcon from '@mui/icons-material/Lock';
-import loginImg from '../assets/loginImg.jpg'
+import loginImg from '../assets/loginImg.png'
 import '../styles/login-screen.css';
 
 const CustomTextField = styled(TextField)({
