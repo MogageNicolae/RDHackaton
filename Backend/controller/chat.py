@@ -90,26 +90,21 @@ class ChatController:
         if file.filename == '':
             return 'No selected file', 400
 
-        chat_id = request.form['chat_id']
-        chat_folder_path = os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat_id)
-        user1_path = os.path.join(chat_folder_path, 'user1')
-        user2_path = os.path.join(chat_folder_path, 'user2')
+        user1_path, user2_path = self.__create_paths(request.form['chat_id'])
 
-        if not os.path.exists(chat_folder_path):
-            os.makedirs(user1_path, exist_ok=True)
-            os.makedirs(user2_path, exist_ok=True)
+        chat = Chats.get_chat_room_by_id(request.form['chat_id'])
+        if not chat:
+            return 'chat not found', 404
 
-        file_path_user1 = os.path.join(user1_path, file.filename)
-        file.save(file_path_user1)
-        file_path_user2 = os.path.join(user2_path, file.filename)
+        user1 = Users.get_user_by_username(chat['user1'])[0]
+        user2 = Users.get_user_by_username(chat['user2'])[0]
 
-        audio, orig_freq = torchaudio.load(file_path_user1)
-        print(audio.shape)
-        print(orig_freq)
-        audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
-        audio_inputs = processor(audios=audio, return_tensors="pt").to(multilingual_model.device)
-        audio_array_from_audio = multilingual_model.generate(**audio_inputs, tgt_lang="eng")[0].cpu().numpy()
-        torchaudio.save(file_path_user2, torch.tensor(audio_array_from_audio), 16_000)
+        if user1['username'] == request.form['sender']:
+            tgt_lang = user2['language']
+            file_path_user1, file_path_user2 = self.__create_audio_files(file, user1_path, user2_path, tgt_lang)
+        else:
+            tgt_lang = user1['language']
+            file_path_user2, file_path_user1 = self.__create_audio_files(file, user2_path, user1_path, tgt_lang)
 
         message = {
             'chat_id': request.form['chat_id'],
@@ -122,6 +117,31 @@ class ChatController:
         Messages.add_message(message)
 
         return 'File uploaded successfully', 200
+
+    def __create_paths(self, chat_id: str):
+        chat_folder_path = os.path.join(self.app.config['AUDIO_UPLOAD_FOLDER'], chat_id)
+        user1_path = os.path.join(chat_folder_path, 'user1')
+        user2_path = os.path.join(chat_folder_path, 'user2')
+
+        if not os.path.exists(chat_folder_path):
+            os.makedirs(user1_path, exist_ok=True)
+            os.makedirs(user2_path, exist_ok=True)
+
+        return user1_path, user2_path
+
+    @staticmethod
+    def __create_audio_files(file, user1_path, user2_path, tgt_lang):
+        file_path_user1 = os.path.join(user1_path, file.filename)
+        file.save(file_path_user1)
+        file_path_user2 = os.path.join(user2_path, file.filename)
+
+        audio, orig_freq = torchaudio.load(file_path_user1)
+        audio = torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
+        audio_inputs = processor(audios=audio, return_tensors="pt").to(multilingual_model.device)
+        audio_array_from_audio = multilingual_model.generate(**audio_inputs, tgt_lang=tgt_lang)[0].cpu().numpy()
+        torchaudio.save(file_path_user2, torch.tensor(audio_array_from_audio), 16_000)
+
+        return file_path_user1, file_path_user2
 
     def __get_users_messages(self, data, chat, user1, user2):
         if data['sender'] == chat['user1']:
