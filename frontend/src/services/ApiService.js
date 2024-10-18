@@ -76,7 +76,29 @@ export const sendMessageInChat = async (messageData, token) => {
         console.error("Sending message failed: ", error);
         throw error;
     }
-} 
+}
+
+export const sendAudioMessageInChat = async (chatId, senderName, audioFile, token) => {
+    try {
+        console.log("sending audio message in chatroom: ", chatId);
+        const formData = new FormData();
+        formData.append('file', audioFile, 'audio.webm');
+        formData.append('chat_id', chatId);
+        formData.append('sender', senderName);
+        const response = await fetch(`${baseURL}/chat/send_message/audio`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Sending audio message failed: ", error);
+        throw error;
+    }
+}
 
 export const chatMessages = async (chatId, token, sender) => {
     try {
@@ -122,23 +144,6 @@ export const searchForUsers = async (name) => {
         return await response.json();
     } catch (error) {
         console.error("Searching for users failed: ", error);
-        throw error;
-    }
-}
-
-export const getAudioFile = async (chat_id, name, audio_name, token) => {
-    try {
-        console.log("getting audio file with name: ", audio_name);
-        const response = await fetch(`${baseURL}/assets/audio/${chat_id}/${name}/${audio_name}`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'audio/mpeg', 'Authorization': `Bearer ${token}`},
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.blob();
-    } catch (error) {
-        console.error("Getting audio file failed: ", error);
         throw error;
     }
 }

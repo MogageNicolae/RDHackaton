@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, {useState, useEffect, useContext, useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Context } from '../contexts/Context';
 import { styled } from '@mui/material/styles';
 import { TextField, Button, Avatar, List, ListItem, ListItemAvatar, ListItemText } from '@mui/material';
 import '../styles/chat-screen.css';
+import {sendAudioMessageInChat} from "../services/ApiService";
 
 const CustomTextField = styled(TextField)({
   '& label.Mui-focused': {
@@ -26,12 +27,13 @@ const ChatScreen = () => {
   const [loadingAudio, setLoadingAudio] = useState(true);
 
   const {
-    name, chatId, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
+    userToken, name, chatId, logout, createChat, chatRooms, getChatRooms, getChatMessages, chatHistory, sendMessage, searchedUsers, searchUsers, setSearchedUsers } = useContext(Context);
 
   useEffect(() => {
     const fetchAudioForMessages = async () => {
       setLoadingAudio(true);
       const audioPromises = localChatHistory.map(async (msg, index) => {
+        console.log(msg)
         if (msg.type === 'audio') {
           return { index, url: `http://localhost:5000/assets/audio/${selectedChat}/${name}/${msg.message}` };
         }
@@ -203,14 +205,15 @@ const ChatScreen = () => {
               ))}
             </ul>
             <div className="message-input">
+              <AudioRecorder chat_id={chatId} sender={name} token={userToken} setLocalChatHistory={setLocalChatHistory}/>
               <CustomTextField
-                variant="outlined"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                  variant="outlined"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                 placeholder="Type a message..."
                 fullWidth
               />
-              <Button variant="contained" color="primary" onClick={handleSendMessage}>
+              <Button variant="contained" color="primary" style={{minWidth: "75px"}} onClick={handleSendMessage}>
                 Send
               </Button>
             </div>
@@ -219,6 +222,91 @@ const ChatScreen = () => {
           <p className="no-chat-selected">Select a chat to start messaging</p>
         )}
       </div>
+    </div>
+  );
+};
+
+const AudioRecorder = ({chat_id, sender, token, setLocalChatHistory}) => {
+  const [recordedUrl, setRecordedUrl] = useState('');
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const mediaStream = useRef(null);
+  const mediaRecorder = useRef(null);
+  const chunks = useRef([]);
+  const [recording, setRecording] = useState(false);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        { audio: true }
+      );
+      mediaStream.current = stream;
+      mediaRecorder.current = new MediaRecorder(stream);
+      mediaRecorder.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.current.push(e.data);
+        }
+      };
+      setRecording(true)
+      mediaRecorder.current.onstop = () => {
+        const newRecordedBlob = new Blob(
+          chunks.current, { type: 'audio/webm' }
+        );
+        setRecordedBlob(newRecordedBlob);
+        const url = URL.createObjectURL(newRecordedBlob);
+        setRecordedUrl(url);
+        chunks.current = [];
+      };
+      mediaRecorder.current.start();
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setRecording(false)
+    }
+  };
+
+  const stopRecording = () => {
+    setRecording(false)
+    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
+      mediaRecorder.current.stop();
+    }
+    if (mediaStream.current) {
+      mediaStream.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
+  };
+
+  const sendAudio = async () => {
+    try {
+      const file = new File([recordedBlob], 'audio.webm', { type: 'audio/webm' });
+      const fileName = await sendAudioMessageInChat(chat_id, sender, file, token);
+      setLocalChatHistory(prevHistory => [
+        ...prevHistory,
+        { sender, message: fileName, type: 'audio' }
+      ]);
+    } catch (error) {
+      console.error('Error sending audio message:', error);
+    }
+  }
+
+  return (
+    <div style={{maxWidth: "30%"}}>
+      <audio controls src={recordedUrl}/>
+      {recordedUrl ?
+        <Button variant="contained" color="primary" style={{maxWidth: "50%", fontSize: "12px", marginRight:"10px"}}
+                onClick={sendAudio}>
+            Send Audio
+        </Button>
+        :
+        <Button variant="contained" color="primary" style={{maxWidth: "50%", fontSize: "12px", marginRight:"10px"}}
+                onClick={recording ? stopRecording : startRecording}>
+          {recording ? 'Stop Recording' : 'Start Recording'}
+        </Button>
+      }
+
+      <Button variant="contained" color="primary" style={{maxWidth: "50%", fontSize: "12px"}}
+              disabled={!recordedUrl} onClick={() => {setRecordedUrl(''); setRecordedBlob(null)}}>
+        Clear Recording
+      </Button>
     </div>
   );
 };
